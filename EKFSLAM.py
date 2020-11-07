@@ -1,6 +1,6 @@
 from typing import Tuple
 import numpy as np
-from numpy.core.shape_base import vstack
+from numpy.core.shape_base import hstack, vstack
 from numpy.lib.shape_base import vsplit
 from scipy.linalg import block_diag
 import scipy.linalg as la
@@ -89,7 +89,7 @@ class EKFSLAM:
             The Jacobian of f wrt. u.
         """
         Fu=np.array([[np.cos(x[2]), - np.sin(x[2]), 0],
-                    [np.sin(x[2]), np.cox(x[2]), 1],
+                    [np.sin(x[2]), np.cos(x[2]), 1],
                     [0, 0, 1]])
 
         assert Fu.shape == (3, 3), "EKFSLAM.Fu: wrong shape"
@@ -171,19 +171,14 @@ class EKFSLAM:
 
         # None as index ads an axis with size 1 at that position.
         # Numpy broadcasts size 1 dimensions to any size when needed
-        delta_m=# TODO, relative position of landmark to sensor on robot in world frame
+        delta_m=m - x[None, :2] - self.sensor_offset[None, :]
 
-        zpredcart=# TODO, predicted measurements in cartesian coordinates, beware sensor offset for VP
-
-        zpred_r=# TODO, ranges
-        zpred_theta=# TODO, bearings
-        zpred=# TODO, the two arrays above stacked on top of each other vertically like
-        # [ranges;
-        #  bearings]
-        # into shape (2, #lmrk)
+        distance=np.linalg.norm(delta_m, axis=1)
+        angle=np.arctan2(delta_m, axis=1)
+        zpredcart=np.hstack((distance[:, None], angle[:, None]))
 
         # stack measurements along one dimension, [range1 bearing1 range2 bearing2 ...]
-        zpred=zpred.T.ravel()
+        zpred=zpredcart.ravel()
 
         assert (
             zpred.ndim == 1 and zpred.shape[0] == eta.shape[0] - 3
@@ -217,7 +212,7 @@ class EKFSLAM:
         zc=  # [x coordinates;
         #  y coordinates]
 
-        zpred=# TODO (2, #measurements), predicted measurements, like
+        zpred=self.
         # [ranges;
         #  bearings]
         zr=# TODO, ranges
