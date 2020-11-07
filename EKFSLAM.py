@@ -404,12 +404,14 @@ class EKFSLAM:
 
         if numLmk > 0:
             # Prediction and innovation covariance
-            zpred=# TODO
-            H=# TODO
+            zpred= self.h(eta)# TODO
+            H= self.H(eta) # TODO
 
             # Here you can use simply np.kron (a bit slow) to form the big (very big in VP after a while) R,
             # or be smart with indexing and broadcasting (3d indexing into 2d mat) realizing you are adding the same R on all diagonals
-            S=# TODO,
+            R_repeated = np.diag(np.diagonal(ml.repmat(self.R, numLmk, numLmk)))
+            S= H @ P @ H.T + R_repeated #np.kron(np.eye(numLmk), self.R)# TODO,
+            
             assert (
                 S.shape == zpred.shape * 2
             ), "EKFSLAM.update: wrong shape on either S or zpred"
@@ -420,8 +422,8 @@ class EKFSLAM:
 
             # No association could be made, so skip update
             if za.shape[0] == 0:
-                etaupd=# TODO
-                Pupd=# TODO
+                etaupd= eta # TODO
+                Pupd= P # TODO
                 NIS=1  # TODO: beware this one when analysing consistency.
 
             else:
@@ -430,9 +432,9 @@ class EKFSLAM:
                 v[1::2]=utils.wrapToPi(v[1::2])
 
                 # Kalman mean update
-                # S_cho_factors = la.cho_factor(Sa) # Optional, used in places for S^-1, see scipy.linalg.cho_factor and scipy.linalg.cho_solve
-                W=# TODO, Kalman gain, can use S_cho_factors
-                etaupd=# TODO, Kalman update
+                S_cho_factors = la.cho_factor(Sa)   # Optional, used in places for S^-1, see scipy.linalg.cho_factor and scipy.linalg.cho_solve
+                W= P @ Ha.T @ la.inv(Sa)            # TODO, Kalman gain, can use S_cho_factors
+                etaupd= eta + W @ v                 # TODO, Kalman update
 
                 # Kalman cov update: use Joseph form for stability
                 jo=-W @ Ha
@@ -441,7 +443,7 @@ class EKFSLAM:
                 Pupd=# TODO, Kalman update. This is the main workload on VP after speedups
 
                 # calculate NIS, can use S_cho_factors
-                NIS=# TODO
+                NIS= v.T @ la.inv(Sa)  @ v          # TODO
 
                 # When tested, remove for speed
                 assert np.allclose(
@@ -453,9 +455,9 @@ class EKFSLAM:
         else:  # All measurements are new landmarks,
             a=np.full(z.shape[0], -1)
             z=z.flatten()
-            NIS=0  # TODO: beware this one, you can change the value to for instance 1
-            etaupd=eta
-            Pupd=P
+            NIS=1  # TODO: beware this one, you can change the value to for instance 1
+            etaupd = eta
+            Pupd = P
 
         # Create new landmarks if any is available
         if self.do_asso:
@@ -465,7 +467,7 @@ class EKFSLAM:
                 z_new_inds[::2]=is_new_lmk
                 z_new_inds[1::2]=is_new_lmk
                 z_new=z[z_new_inds]
-                etaupd, Pupd=# TODO, add new landmarks.
+                etaupd, Pupd= self.add_landmarks(eta, P, z) # TODO, add new landmarks.
 
         assert np.allclose(
             Pupd, Pupd.T), "EKFSLAM.update: Pupd must be symmetric"
