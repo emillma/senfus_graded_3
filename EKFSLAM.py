@@ -179,7 +179,7 @@ class EKFSLAM:
 
         distance = np.linalg.norm(delta_m, axis=0)
         angle = np.arctan2(delta_m[0], delta_m[1])
-        zpredcart = np.hstack((distance[:, None], angle[:, None]))
+        zpredcart = np.vstack((distance, angle))
 
         # stack measurements along one dimension, [range1 bearing1 range2 bearing2 ...]
         zpred = zpredcart.ravel()
