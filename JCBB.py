@@ -1,6 +1,5 @@
 import numpy as np
 from functools import lru_cache
-import profilehooks
 from scipy.stats import chi2
 import scipy.linalg as la
 import utils
@@ -8,6 +7,8 @@ import utils
 chi2isf_cached = lru_cache(maxsize=None)(chi2.isf)
 
 # TODO: make sure a is 0-indexed
+
+
 def JCBB(z, zbar, S, alpha1, alpha2):
     assert len(z.shape) == 1, "z must be in one row in JCBB"
     assert z.shape[0] % 2 == 0, "z must be equal in x and y"
@@ -63,7 +64,8 @@ def JCBBrec(z, zbar, S, alpha1, g2, j, a, ic, abest):
                 ic[j:, i] = np.Inf  # landmark not available any more.
 
                 # Needs to explicitly copy a for recursion to work
-                abest = JCBBrec(z, zbar, S, alpha1, g2, j + 1, a.copy(), ic, abest)
+                abest = JCBBrec(z, zbar, S, alpha1, g2,
+                                j + 1, a.copy(), ic, abest)
                 ic[j:, i] = ici  # set landmark available again for next round.
 
         if n + (m - j - 2) >= num_associations(abest):
@@ -88,9 +90,9 @@ def individualCompatibility(z, zbar, S):
     v_all = z.reshape(-1, 1, 2, 1) - zbar.reshape(1, -1, 2, 1)
 
     # get the (2, 2) blocks on the diagonal to make the (nz_bar, 2, 2) array of individual S
-    ## first idxs get to the start of lmk, second is along the lmk axis
+    # first idxs get to the start of lmk, second is along the lmk axis
     idxs = np.arange(nz_bar)[:, None] * 2 + np.arange(2)[None]
-    ## broadcast lmk axis to two dimesions
+    # broadcast lmk axis to two dimesions
     S_all = S[idxs[..., None], idxs[:, None]]
 
     # broadcast S_all over the measurements by adding leading 1 size axis to match v_all
