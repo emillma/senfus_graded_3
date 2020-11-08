@@ -46,7 +46,7 @@ class EKFSLAM:
         np.ndarray, shape = (3,)
             the predicted state
         """
-        xpred = x + np.vstack((rotmat2d(u[2]) @ x[:2], u[2]))
+        xpred = x + np.append(rotmat2d(x[2]) @ x[:2], u[2])
         assert xpred.shape == (3,), "EKFSLAM.f: wrong shape for xpred"
         return xpred
 
@@ -66,7 +66,7 @@ class EKFSLAM:
             The Jacobian of f wrt. x.
         """
         Fx = np.array([
-            [1, 0, -u[0] * np.sin(x[2]) - u[1] * cos(x[2])],
+            [1, 0, -u[0] * np.sin(x[2]) - u[1] * np.cos(x[2])],
             [0, 1, u[0]*np.cos(x[2])-u[1]*np.sin(x[2])],
             [0, 0, 1]
         ])
@@ -171,14 +171,14 @@ class EKFSLAM:
         # reshape map (2, #landmarks), m[:, j] is the jth landmark
         m = eta[3:].reshape((-1, 2)).T
 
-        Rot = rotmat2d(-x[2])
+        Rot = rotmat2d(-x[2])  # TODO skonner ikke hvorfor minus
 
         # None as index ads an axis with size 1 at that position.
         # Numpy broadcasts size 1 dimensions to any size when needed
-        delta_m = m - x[None, :2] - self.sensor_offset[None, :]
+        delta_m = m - x[:2, None] - (Rot@self.sensor_offset)[:, None]
 
-        distance = np.linalg.norm(delta_m, axis=1)
-        angle = np.arctan2(delta_m, axis=1)
+        distance = np.linalg.norm(delta_m, axis=0)
+        angle = np.arctan2(delta_m[0], delta_m[1])
         zpredcart = np.hstack((distance[:, None], angle[:, None]))
 
         # stack measurements along one dimension, [range1 bearing1 range2 bearing2 ...]
@@ -322,9 +322,9 @@ class EKFSLAM:
         etaadded = np.concatenate([eta[:], lmnew])
         # TODO, block diagonal of P_new, see problem text in 1g) in graded assignment 3
         Padded = la.block_diag(P, Gx @ P[:3, :3] @ Gx.T + Rall.T)
-        Padded[n:, :n] = P[:, :3] @ Gx.T  # TODO, top right corner of P_new
+        Padded[:n, n:] = P[:, :3] @ Gx.T  # TODO, top right corner of P_new
         # TODO, transpose of above. Should yield the same as calcualion, but this enforces symmetry and should be cheaper
-        Padded[:n, n:] = (Padded[:n.n:]).T
+        Padded[n:, :n] = (Padded[:n, n:]).T
 
         assert (
             etaadded.shape * 2 == Padded.shape
@@ -457,7 +457,7 @@ class EKFSLAM:
                 # same as adding Identity mat
                 jo[np.diag_indices(jo.shape[0])] += 1
                 # TODO, Kalman update. This is the main workload on VP after speedups
-                Pupd = jo@P@jo.T + self.R
+                Pupd = jo@P
 
                 # calculate NIS, can use S_cho_factors
                 NIS = v.T @ la.inv(Sa)  @ v          # TODO
