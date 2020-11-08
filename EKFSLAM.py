@@ -171,7 +171,7 @@ class EKFSLAM:
         # reshape map (2, #landmarks), m[:, j] is the jth landmark
         m = eta[3:].reshape((-1, 2)).T
 
-        Rot = rotmat2d(-x[2])  # TODO skonner ikke hvorfor minus
+        Rot = rotmat2d(-x[2])  # TODO hvorfor minus
 
         # None as index ads an axis with size 1 at that position.
         # Numpy broadcasts size 1 dimensions to any size when needed
@@ -182,7 +182,7 @@ class EKFSLAM:
         zpredcart = np.vstack((distance, angle))
 
         # stack measurements along one dimension, [range1 bearing1 range2 bearing2 ...]
-        zpred = zpredcart.ravel()
+        zpred = zpredcart.T.ravel()
 
         assert (
             zpred.ndim == 1 and zpred.shape[0] == eta.shape[0] - 3
@@ -215,6 +215,7 @@ class EKFSLAM:
         # m - rho that appears in (11.15) and (11.16)
         delta_m = (m - x[:2].reshape(2, 1)
                    - rotmat2d(x[2]) @ self.sensor_offset.reshape(2, 1))
+
         zc = [Rot @ m_i for m_i in delta_m.T]  # which of theese?
        # zc = Rot @ delta_m
 

@@ -94,9 +94,9 @@ K = len(z)
 M = len(landmarks)
 
 # %% Initilize
-Q = np.eye(3)  # TODO
-R = np.eye(2)  # TODO
-
+Q = np.diag([0.05, 0.05, 0.0001])  # TODO
+R = np.diag([0.05, 0.0002])  # TODO
+assert 0
 doAsso = True
 
 JCBBalphas = np.array(
@@ -104,6 +104,7 @@ JCBBalphas = np.array(
 )   # first is for joint compatibility, second is individual
 # these can have a large effect on runtime either through the number of landmarks created
 # or by the size of the association search space.
+
 
 slam = EKFSLAM(Q, R, do_asso=doAsso, alphas=JCBBalphas)
 
@@ -135,7 +136,7 @@ if doAssoPlot:
     figAsso, axAsso = plt.subplots(num=1, clear=True)
 
 # %% Run simulation
-N = K
+N = 10
 
 print("starting sim (" + str(N) + " iterations)")
 
@@ -187,7 +188,7 @@ for k, z_k in tqdm(enumerate(z[:N])):
 print("sim complete")
 
 pose_est = np.array([x[:3] for x in eta_hat[:N]])
-lmk_est = [eta_hat_k[3:].reshape(-1, 2) for eta_hat_k in eta_hat]
+lmk_est = [eta_hat_k[3:].reshape(-1, 2) for eta_hat_k in eta_hat[:N]]
 lmk_est_final = lmk_est[N - 1]
 
 np.set_printoptions(precision=4, linewidth=100)
