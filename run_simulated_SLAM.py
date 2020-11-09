@@ -2,7 +2,6 @@
 from debugger import mes_diff
 from plotting import ellipse
 from EKFSLAM import EKFSLAM
-from EKFSLAM_other import EKFSLAM as EKFSLAM_other
 from typing import List, Optional
 
 from scipy.io import loadmat
