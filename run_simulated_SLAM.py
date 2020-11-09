@@ -38,7 +38,7 @@ M = len(landmarks)
 # %% Initilize
 Q = np.diag([0.1, 0.1, 0.001])  # TODO Best
 R = np.diag([0.0025, 0.0004])  # TODO Best
-assert 0
+# assert 0
 doAsso = True
 
 JCBBalphas = np.array(
@@ -106,7 +106,7 @@ for k, z_k in tqdm(enumerate(z[:N])):
         NISnorm[k] = 1
         CInorm[k].fill(1)
 
-    # NEESes[k] =  # TODO, use provided function slam.NEESes
+    NEESes[k] = EKFSLAM.NEESes(eta_hat[k][:3], P_hat[k][:3, :3], poseGT[k])
 
     if doAssoPlot and k > 0:
         axAsso.clear()
@@ -135,8 +135,19 @@ lmk_est_final = lmk_est[N - 1]
 
 np.set_printoptions(precision=4, linewidth=100)
 
+mins = np.amin(landmarks, axis=0)
+maxs = np.amax(landmarks, axis=0)
+
+ranges = maxs - mins
+offsets = ranges * 0.2
+
+mins -= offsets
+maxs += offsets
+
 # %% Plotting of results
 a = play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
 plot_trajectory(pose_est, poseGT, P_hat, N)
+plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N, mins, maxs)
 plot_NIS(NISnorm, CInorm, N)
+plot_NEES(NEESes, alpha, N)
 plt.show()
