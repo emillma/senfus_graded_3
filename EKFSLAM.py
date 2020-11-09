@@ -181,7 +181,7 @@ class EKFSLAM:
 
         # TODO, predicted measurements in cartesian coordinates, beware sensor offset for VP
 
-        zpred_r = [np.linalg.norm(mi) for mi in delta_m.T]  # TODO, ranges
+        zpred_r = np.linalg.norm(delta_m.T, axis=1)  # TODO, ranges
         zpred_theta = wrapToPi(np.arctan2(delta_m[1, :], delta_m[0, :])
                                - x[2])
         # TODO, the two arrays above stacked on top of each other vertically like
@@ -492,7 +492,7 @@ class EKFSLAM:
 
         return etaupd, Pupd, NIS, a
 
-    @classmethod
+    @ classmethod
     def NEESes(cls, x: np.ndarray, P: np.ndarray, x_gt: np.ndarray,) -> np.ndarray:
         """Calculates the total NEES and the NEES for the substates
         Args:

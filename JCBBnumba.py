@@ -1,12 +1,29 @@
+from numba.np.ufunc import parallel
 import numpy as np
 from functools import lru_cache
 from scipy.stats import chi2
-import scipy.linalg as la
 import utils
+import numba as nb
 
 chi2isf_cached = lru_cache(maxsize=None)(chi2.isf)
 
 # TODO: make sure a is 0-indexed
+alpha1 = 10e-4
+alpha2 = 10e-6
+
+cache = np.zeros(300)
+for n in range(cache.size):
+    cache[n] = chi2.isf(alpha1, 2 * (n + 1))
+
+
+@nb.njit('f4(f4,i4)', cache=True)
+def chi2isf_cached(alpha, k):
+    return cache[np.int(k/2-1)]
+
+
+@nb.njit
+def wrapToPi(angle):
+    return (angle + np.pi) % (2*np.pi) - np.pi
 
 
 def JCBB(z, zbar, S, alpha1, alpha2):
@@ -36,6 +53,7 @@ def JCBB(z, zbar, S, alpha1, alpha2):
     return abest
 
 
+@nb.njit(cache=True, parallel=True)
 def JCBBrec(z, zbar, S, alpha1, g2, j, a, ic, abest):
     m = z.shape[0] // 2
     # assert isinstance(m, int), "m in JCBBrec must be int"
@@ -49,7 +67,8 @@ def JCBBrec(z, zbar, S, alpha1, g2, j, a, ic, abest):
             abest = a
         # else abest = previous abest from the input
     else:  # still at least one measurement to associate
-        I = np.argsort(ic[j, ic[j, :] < g2])
+
+        I = np.argsort(ic[j][ic[j, :] < g2])
         # allinds = np.array(range(ic.shape[1]), dtype=int)
         usableinds = np.where(ic[j, :] < g2)[0]  # allinds[ic[j, :] < g2]
         # if np.any(np.where(ic[j, :] < g2)[0] != usableinds):
@@ -102,6 +121,7 @@ def individualCompatibility(z, zbar, S):
     return ic
 
 
+@nb.njit(cache=True, parallel=True)
 def NIS(z, zbar, S, a):
     zr = z.reshape(-1, 2).T
     zbarr = zbar.reshape(-1, 2).T
@@ -114,22 +134,25 @@ def NIS(z, zbar, S, a):
         ass_idxs = a[is_ass]  # .astype(np.int)
         zbartest = zbarr[:, ass_idxs]
 
-        inds = np.empty(2 * len(ass_idxs), dtype=int)
+        inds = np.empty(2 * len(ass_idxs), dtype=np.int32)
         inds[::2] = 2 * ass_idxs
         inds[1::2] = 2 * ass_idxs + 1
         # inds = np.block([[inds], [inds + 1]]).flatten("F")
-
-        Stest = S[inds[:, None], inds]
+        Stest = np.empty((2*len(ass_idxs), 2*len(ass_idxs)), dtype=S.dtype)
+        for i in nb.prange(inds.size):
+            for j in nb.prange(inds.size):
+                Stest[i, j] = S[inds[i], inds[j]]
 
         v = ztest - zbartest
         v = v.T.flatten()
 
-        v[1::2] = utils.wrapToPi(v[1::2])
+        v[1::2] = wrapToPi(v[1::2])
 
         nis = v @ np.linalg.solve(Stest, v)
 
     return nis
 
 
+@nb.njit
 def num_associations(array):
     return np.count_nonzero(array > -1)

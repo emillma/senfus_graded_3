@@ -21,7 +21,6 @@ setup_plot()
 
 # to see your plot config
 
-
 # %% Load data
 simSLAM_ws = loadmat("simulatedSLAM")
 
@@ -79,7 +78,7 @@ if doAssoPlot:
     figAsso, axAsso = plt.subplots(num=1, clear=True)
 
 # %% Run simulation
-N = 1000
+N = len(z)
 
 print("starting sim (" + str(N) + " iterations)")
 
@@ -91,9 +90,9 @@ for k, z_k in tqdm(enumerate(z[:N])):
         eta_pred[k + 1], P_pred[k +
                                 1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])
 
-    assert (
-        eta_hat[k].shape[0] == P_hat[k].shape[0]
-    ), "dimensions of mean and covariance do not match"
+    # assert (
+    #     eta_hat[k].shape[0] == P_hat[k].shape[0]
+    # ), "dimensions of mean and covariance do not match"
 
     num_asso = np.count_nonzero(a[k] > -1)
 
