@@ -1,14 +1,11 @@
 from typing import Tuple
 import numpy as np
-from numpy.core.shape_base import hstack, vstack
-from numpy.lib.shape_base import vsplit
 from scipy.linalg import block_diag
-from numpy import matlib as ml
 import scipy.linalg as la
 from utils import rotmat2d
 from JCBB import JCBB
 import utils
-from multiprocessing import Process
+from numpy import matlib as ml
 
 # import line_profiler
 # import atexit
@@ -92,7 +89,7 @@ class EKFSLAM:
             The Jacobian of f wrt. u.
         """
         Fu = np.array([[np.cos(x[2]), - np.sin(x[2]), 0],
-                       [np.sin(x[2]), np.cos(x[2]), 1],
+                       [np.sin(x[2]), np.cos(x[2]), 0],
                        [0, 0, 1]])
 
         # assert Fu.shape == (3, 3), "EKFSLAM.Fu: wrong shape"
@@ -173,7 +170,7 @@ class EKFSLAM:
         # reshape map (2, #landmarks), m[:, j] is the jth landmark
         m = eta[3:].reshape((-1, 2)).T
 
-        Rot = rotmat2d(x[2])  # TODO hvorfor minus
+        Rot = rotmat2d(-x[2])
 
         # None as index ads an axis with size 1 at that position.
         # Numpy broadcasts size 1 dimensions to any size when needed
@@ -211,7 +208,7 @@ class EKFSLAM:
 
         numM = m.shape[1]
 
-        Rot = rotmat2d(x[2])
+        Rot = rotmat2d(-x[2])
 
         # TODO, relative position of landmark to robot in world frame.
         # m - rho that appears in (11.15) and (11.16)
@@ -225,7 +222,6 @@ class EKFSLAM:
         #  y coordinates]
 
         zpred = self.h(eta)
-
         # [ranges;
         #  bearings]
         zr = zpred[::2]  # TODO, ranges
@@ -392,7 +388,6 @@ class EKFSLAM:
 
             return zass, zpredass, Hass, Sass, a
         else:
-            # should one do something her
             pass
 
     def update(
@@ -420,7 +415,6 @@ class EKFSLAM:
         if numLmk > 0:
             # Prediction and innovation covariance
             zpred = self.h(eta)  # TODO
-
             H = self.H(eta)  # TODO
 
             # Here you can use simply np.kron (a bit slow) to form the big (very big in VP after a while) R,
@@ -451,7 +445,6 @@ class EKFSLAM:
 
                 # Kalman mean update
                 # Optional, used in places for S^-1, see scipy.linalg.cho_factor and scipy.linalg.cho_solve
-                S_cho_factors = la.cho_factor(Sa)
                 # TODO, Kalman gain, can use S_cho_factors
                 W = P @ Ha.T @ la.inv(Sa)
                 etaupd = eta + W @ v                 # TODO, Kalman update
@@ -464,6 +457,8 @@ class EKFSLAM:
                 Pupd = jo@P
 
                 # calculate NIS, can use S_cho_factors
+                # S_cho = la.cho_factor(Sa)
+                # NIS = v.T @ la.cho_solve(S_cho, v)  # TODO
                 NIS = v.T @ la.inv(Sa)  @ v          # TODO
 
                 # When tested, remove for speed
@@ -489,7 +484,7 @@ class EKFSLAM:
                 z_new_inds[1::2] = is_new_lmk
                 z_new = z[z_new_inds]
                 # TODO, add new landmarks.
-                etaupd, Pupd = self.add_landmarks(eta, P, z)
+                etaupd, Pupd = self.add_landmarks(eta, P, z_new)
 
         # assert np.allclose(
         #     Pupd, Pupd.T), "EKFSLAM.update: Pupd must be symmetric"
@@ -498,7 +493,7 @@ class EKFSLAM:
 
         return etaupd, Pupd, NIS, a
 
-    @ classmethod
+    @classmethod
     def NEESes(cls, x: np.ndarray, P: np.ndarray, x_gt: np.ndarray,) -> np.ndarray:
         """Calculates the total NEES and the NEES for the substates
         Args:
