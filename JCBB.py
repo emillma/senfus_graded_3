@@ -10,8 +10,8 @@ chi2isf_cached = lru_cache(maxsize=None)(chi2.isf)
 
 
 def JCBB(z, zbar, S, alpha1, alpha2):
-    assert len(z.shape) == 1, "z must be in one row in JCBB"
-    assert z.shape[0] % 2 == 0, "z must be equal in x and y"
+    # assert len(z.shape) == 1, "z must be in one row in JCBB"
+    # assert z.shape[0] % 2 == 0, "z must be equal in x and y"
     m = z.shape[0] // 2
 
     a = np.full(m, -1, dtype=int)
@@ -38,7 +38,7 @@ def JCBB(z, zbar, S, alpha1, alpha2):
 
 def JCBBrec(z, zbar, S, alpha1, g2, j, a, ic, abest):
     m = z.shape[0] // 2
-    assert isinstance(m, int), "m in JCBBrec must be int"
+    # assert isinstance(m, int), "m in JCBBrec must be int"
     n = num_associations(a)
 
     if j >= m:  # end of recursion
@@ -80,10 +80,10 @@ def individualCompatibility(z, zbar, S):
     nz = z.shape[0] // 2
     nz_bar = zbar.shape[0] // 2
 
-    assert z.shape[0] % 2 == 0, "JCBB.individualCompatibility: z must have even lenght"
-    assert (
-        zbar.shape[0] % 2 == 0
-    ), "JCBB.individualCompatibility: zbar must have even length"
+    # assert z.shape[0] % 2 == 0, "JCBB.individualCompatibility: z must have even lenght"
+    # assert (
+    #     zbar.shape[0] % 2 == 0
+    # ), "JCBB.individualCompatibility: zbar must have even length"
 
     # all innovations from broadcasting
     # extra trailing dimension to avoid problems in solve when z has 2 landmarks

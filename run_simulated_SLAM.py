@@ -1,4 +1,5 @@
 # %% Imports
+from debugger import mes_diff
 from plotting import ellipse
 from EKFSLAM import EKFSLAM
 from typing import List, Optional
@@ -12,78 +13,19 @@ from matplotlib import animation
 from scipy.stats import chi2
 import utils
 
-try:
-    from tqdm import tqdm
-except ImportError as e:
-    print(e)
-    print("install tqdm to have progress bar")
-
-    # def tqdm as dummy as it is not available
-    def tqdm(*args, **kwargs):
-        return args[0]
-
+from tqdm import tqdm
+from plott_setup import setup_plot
+from plotting import *
+setup_plot()
 # %% plot config check and style setup
 
-
 # to see your plot config
-print(f"matplotlib backend: {matplotlib.get_backend()}")
-print(f"matplotlib config file: {matplotlib.matplotlib_fname()}")
-print(f"matplotlib config dir: {matplotlib.get_configdir()}")
-plt.close("all")
-
-# try to set separate window ploting
-if "inline" in matplotlib.get_backend():
-    print("Plotting is set to inline at the moment:", end=" ")
-
-    if "ipykernel" in matplotlib.get_backend():
-        print("backend is ipykernel (IPython?)")
-        print("Trying to set backend to separate window:", end=" ")
-        import IPython
-
-        IPython.get_ipython().run_line_magic("matplotlib", "")
-    else:
-        print("unknown inline backend")
-
-print("continuing with this plotting backend", end="\n\n\n")
-
-
-# set styles
-try:
-    # installed with "pip install SciencePLots" (https://github.com/garrettj403/SciencePlots.git)
-    # gives quite nice plots
-    plt_styles = ["science", "grid", "bright", "no-latex"]
-    plt.style.use(plt_styles)
-    print(f"pyplot using style set {plt_styles}")
-except Exception as e:
-    print(e)
-    print("setting grid and only grid and legend manually")
-    plt.rcParams.update(
-        {
-            # setgrid
-            "axes.grid": True,
-            "grid.linestyle": ":",
-            "grid.color": "k",
-            "grid.alpha": 0.5,
-            "grid.linewidth": 0.5,
-            # Legend
-            "legend.frameon": True,
-            "legend.framealpha": 1.0,
-            "legend.fancybox": True,
-            "legend.numpoints": 1,
-        }
-    )
 
 
 # %% Load data
 simSLAM_ws = loadmat("simulatedSLAM")
 
-# NB: this is a MATLAB cell, so needs to "double index" to get out the measurements of a time step k:
-#
-# ex:
-#
-# z_k = z[k][0] # z_k is a (2, m_k) matrix with columns equal to the measurements of time step k
-#
-##
+
 z = [zk.T for zk in simSLAM_ws["z"].ravel()]
 
 landmarks = simSLAM_ws["landmarks"].T
@@ -94,8 +36,8 @@ K = len(z)
 M = len(landmarks)
 
 # %% Initilize
-Q = np.diag([0.05, 0.05, 0.0001])  # TODO
-R = np.diag([0.05, 0.0002])  # TODO
+Q = np.diag([0.01, 0.01, 0.001])  # TODO
+R = np.diag([0.01, 0.0001])  # TODO
 assert 0
 doAsso = True
 
@@ -107,6 +49,9 @@ JCBBalphas = np.array(
 
 
 slam = EKFSLAM(Q, R, do_asso=doAsso, alphas=JCBBalphas)
+eta = np.array([0, 0, 0, 1, 0])
+zpred = slam.h(eta)
+
 
 # allocate
 eta_pred: List[Optional[np.ndarray]] = [None] * K
@@ -136,13 +81,15 @@ if doAssoPlot:
     figAsso, axAsso = plt.subplots(num=1, clear=True)
 
 # %% Run simulation
-N = 10
+N = 3
 
 print("starting sim (" + str(N) + " iterations)")
 
 for k, z_k in tqdm(enumerate(z[:N])):
     eta_hat[k], P_hat[k], NIS[k], a[k] = slam.update(
         eta_pred[k], P_pred[k], z_k)  # TODO update
+
+    print(eta_hat[k].shape)
 
     if k < K - 1:
         # TODO predict
@@ -194,129 +141,7 @@ lmk_est_final = lmk_est[N - 1]
 np.set_printoptions(precision=4, linewidth=100)
 
 # %% Plotting of results
-mins = np.amin(landmarks, axis=0)
-maxs = np.amax(landmarks, axis=0)
-
-ranges = maxs - mins
-offsets = ranges * 0.2
-
-mins -= offsets
-maxs += offsets
-
-fig2, ax2 = plt.subplots(num=2, clear=True)
-# landmarks
-ax2.scatter(*landmarks.T, c="r", marker="^")
-ax2.scatter(*lmk_est_final.T, c="b", marker=".")
-# Draw covariance ellipsis of measurements
-for l, lmk_l in enumerate(lmk_est_final):
-    idxs = slice(3 + 2 * l, 3 + 2 * l + 2)
-    rI = P_hat[N - 1][idxs, idxs]
-    el = ellipse(lmk_l, rI, 5, 200)
-    ax2.plot(*el.T, "b")
-
-ax2.plot(*poseGT.T[:2], c="r", label="gt")
-ax2.plot(*pose_est.T[:2], c="g", label="est")
-ax2.plot(*ellipse(pose_est[-1, :2], P_hat[N - 1][:2, :2], 5, 200).T, c="g")
-ax2.set(title="results", xlim=(mins[0], maxs[0]), ylim=(mins[1], maxs[1]))
-ax2.axis("equal")
-ax2.grid()
-
-# %% Consistency
-
-# NIS
-insideCI = (CInorm[:N, 0] <= NISnorm[:N]) * (NISnorm[:N] <= CInorm[:N, 1])
-
-fig3, ax3 = plt.subplots(num=3, clear=True)
-ax3.plot(CInorm[:N, 0], '--')
-ax3.plot(CInorm[:N, 1], '--')
-ax3.plot(NISnorm[:N], lw=0.5)
-
-ax3.set_title(f'NIS, {insideCI.mean()*100}% inside CI')
-
-# NEES
-
-fig4, ax4 = plt.subplots(nrows=3, ncols=1, figsize=(
-    7, 5), num=4, clear=True, sharex=True)
-tags = ['all', 'pos', 'heading']
-dfs = [3, 2, 1]
-
-for ax, tag, NEES, df in zip(ax4, tags, NEESes.T, dfs):
-    CI_NEES = chi2.interval(alpha, df)
-    ax.plot(np.full(N, CI_NEES[0]), '--')
-    ax.plot(np.full(N, CI_NEES[1]), '--')
-    ax.plot(NEES[:N], lw=0.5)
-    insideCI = (CI_NEES[0] <= NEES) * (NEES <= CI_NEES[1])
-    ax.set_title(f'NEES {tag}: {insideCI.mean()*100}% inside CI')
-
-    CI_ANEES = np.array(chi2.interval(alpha, df*N)) / N
-    print(f"CI ANEES {tag}: {CI_ANEES}")
-    print(f"ANEES {tag}: {NEES.mean()}")
-
-fig4.tight_layout()
-
-# %% RMSE
-
-ylabels = ['m', 'deg']
-scalings = np.array([1, 180/np.pi])
-
-fig5, ax5 = plt.subplots(nrows=2, ncols=1, figsize=(
-    7, 5), num=5, clear=True, sharex=True)
-
-pos_err = np.linalg.norm(pose_est[:N, :2] - poseGT[:N, :2], axis=1)
-heading_err = np.abs(utils.wrapToPi(pose_est[:N, 2] - poseGT[:N, 2]))
-
-errs = np.vstack((pos_err, heading_err))
-
-for ax, err, tag, ylabel, scaling in zip(ax5, errs, tags[1:], ylabels, scalings):
-    ax.plot(err*scaling)
-    ax.set_title(f"{tag}: RMSE {np.sqrt((err**2).mean())*scaling} {ylabel}")
-    ax.set_ylabel(f"[{ylabel}]")
-    ax.grid()
-
-fig5.tight_layout()
-
-# %% Movie time
-
-if playMovie:
-    try:
-        print("recording movie...")
-
-        from celluloid import Camera
-
-        pauseTime = 0.05
-        fig_movie, ax_movie = plt.subplots(num=6, clear=True)
-
-        camera = Camera(fig_movie)
-
-        ax_movie.grid()
-        ax_movie.set(xlim=(mins[0], maxs[0]), ylim=(mins[1], maxs[1]))
-        camera.snap()
-
-        for k in tqdm(range(N)):
-            ax_movie.scatter(*landmarks.T, c="r", marker="^")
-            ax_movie.plot(*poseGT[:k, :2].T, "r-")
-            ax_movie.plot(*pose_est[:k, :2].T, "g-")
-            ax_movie.scatter(*lmk_est[k].T, c="b", marker=".")
-
-            if k > 0:
-                el = ellipse(pose_est[k, :2], P_hat[k][:2, :2], 5, 200)
-                ax_movie.plot(*el.T, "g")
-
-            numLmk = lmk_est[k].shape[0]
-            for l, lmk_l in enumerate(lmk_est[k]):
-                idxs = slice(3 + 2 * l, 3 + 2 * l + 2)
-                rI = P_hat[k][idxs, idxs]
-                el = ellipse(lmk_l, rI, 5, 200)
-                ax_movie.plot(*el.T, "b")
-
-            camera.snap()
-        animation = camera.animate(interval=100, blit=True, repeat=False)
-        print("playing movie")
-
-    except ImportError:
-        print(
-            "Install celluloid module, \n\n$ pip install celluloid\n\nto get fancy animation of EKFSLAM."
-        )
-
+a = play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
+plot_trajectory(pose_est, poseGT, P_hat, N)
+plot_NIS(NISnorm, CInorm, N)
 plt.show()
-# %%
