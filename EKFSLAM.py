@@ -5,6 +5,7 @@ import scipy.linalg as la
 from utils import rotmat2d
 from JCBB import JCBB
 import utils
+from utils import wrapToPi
 from numpy import matlib as ml
 
 # import line_profiler
@@ -170,18 +171,27 @@ class EKFSLAM:
         # reshape map (2, #landmarks), m[:, j] is the jth landmark
         m = eta[3:].reshape((-1, 2)).T
 
-        Rot = rotmat2d(-x[2])
+        Rot = rotmat2d(-x[2]*0)
 
         # None as index ads an axis with size 1 at that position.
         # Numpy broadcasts size 1 dimensions to any size when needed
-        delta_m = m - x[:2, None] - (Rot@self.sensor_offset)[:, None]
+        # TODO, relative position of landmark to sensor on robot in world frame
+        delta_m = (m - x[:2].reshape(2, 1)
+                   - rotmat2d(x[2]) @ (self.sensor_offset).reshape(2, 1))
 
-        distance = np.linalg.norm(delta_m, axis=0)
-        angle = np.arctan2(delta_m[1], delta_m[0]) - x[2]
-        zpredcart = np.vstack((distance, angle))
+        # TODO, predicted measurements in cartesian coordinates, beware sensor offset for VP
+
+        zpred_r = [np.linalg.norm(mi) for mi in delta_m.T]  # TODO, ranges
+        zpred_theta = wrapToPi(np.arctan2(delta_m[1, :], delta_m[0, :])
+                               - x[2])
+        # TODO, the two arrays above stacked on top of each other vertically like
+        zpred = np.vstack([zpred_r, zpred_theta]).T
+        # [ranges;
+        #  bearings]
+        # into shape (2, #lmrk)
 
         # stack measurements along one dimension, [range1 bearing1 range2 bearing2 ...]
-        zpred = zpredcart.T.ravel()
+        zpred = zpred.ravel()
 
         # assert (
         #     zpred.ndim == 1 and zpred.shape[0] == eta.shape[0] - 3
@@ -208,25 +218,20 @@ class EKFSLAM:
 
         numM = m.shape[1]
 
-        Rot = rotmat2d(-x[2])
-
-        # TODO, relative position of landmark to robot in world frame.
-        # m - rho that appears in (11.15) and (11.16)
+        # TODO, relative position of landmark to robot in world frame. m - rho that appears in (11.15) and (11.16)
         delta_m = (m - x[:2].reshape(2, 1)
-                   - rotmat2d(x[2]) @ self.sensor_offset.reshape(2, 1))
+                   - rotmat2d(x[2]) @ (self.sensor_offset.reshape(2, 1)))
 
-        zc = [Rot @ m_i for m_i in delta_m.T]  # which of theese?
-       # zc = Rot @ delta_m
-
+        delta_m_norm = np.linalg.norm(delta_m, axis=0)
+        delta_m_normalized = delta_m / delta_m_norm[None, :]
         # [x coordinates;
         #  y coordinates]
 
-        zpred = self.h(eta)
+        # TODO (2, #measurements), predicted measurements, like
         # [ranges;
         #  bearings]
-        zr = zpred[::2]  # TODO, ranges
 
-        Rpihalf = rotmat2d(np.pi / 2)
+        rpi_2 = rotmat2d(np.pi / 2)
 
         # In what follows you can be clever and avoid making this for all the landmarks you _know_
         # you will not detect (the maximum range should be available from the data).
@@ -236,28 +241,22 @@ class EKFSLAM:
         # You may or may not want to do this like this
         # TODO, see eq (11.15), (11.16), (11.17)
         H = np.zeros((2 * numM, 3 + 2 * numM))
-        Hx = H[:, :3]  # slice view, setting elements of Hx will set H as well
-        Hm = H[:, 3:]  # slice view, setting elements of Hm will set H as well
 
+        H = np.zeros_like(H)
+        H[::2, :2] = -delta_m_normalized.T
+        drdm_indices = (np.repeat(np.arange(0, 2 * numM, 2), 2),
+                        np.arange(0, 2 * numM)+3)
+        H[drdm_indices] = delta_m_normalized.T.ravel()
+
+        H[1::2, :2] = -(rpi_2@delta_m_normalized).T / delta_m_norm[:, None]
+        H[1::2, 2] = -1
+        drdm_indices = (np.repeat(np.arange(1, 2 * numM, 2), 2),
+                        np.arange(0, 2 * numM)+3)
+        H[drdm_indices] = ((rpi_2@delta_m_normalized).T
+                           / delta_m_norm[:, None]).ravel()
         # proposed way is to go through landmarks one by one
         # preallocate and update this for some speed gain if looping
-        jac_z_cb = -np.eye(2, 3)
-        for i in range(numM):  # But this whole loop can be vectorized
-            ind = 2 * i  # starting postion of the ith landmark into H
-            # the inds slice for the ith landmark into H
-            inds = slice(ind, ind + 2)
-            jac_z_cb[:, 2] = -Rpihalf @ delta_m[:, i]
-            Hx[inds, :][0, :] = (delta_m[:, i].T / zr[i]) @ jac_z_cb
-            Hx[inds, :][1, :] = (delta_m[:, i].T @ Rpihalf.T /
-                                 (zr[i] ** 2)) @ jac_z_cb
-            Hm[inds, inds] = Hx[inds, 0:2]
 
-            # TODO: Set H or Hx and Hm here
-
-        # TODO: You can set some assertions here to make sure that some of the structure in H is correct
-
-        # assert (H.shape == (2 * numM, 3 + 2 * numM)
-        #         ), "EKFSLAM.H: Wrong shape on calculated H"
         return H
 
     def add_landmarks(
@@ -320,7 +319,7 @@ class EKFSLAM:
         # TODO, append new landmarks to state vector
         etaadded = np.concatenate([eta[:], lmnew])
         # TODO, block diagonal of P_new, see problem text in 1g) in graded assignment 3
-        Padded = la.block_diag(P, Gx @ P[:3, :3] @ Gx.T + Rall.T)
+        Padded = la.block_diag(P, Gx @ P[:3, :3] @ Gx.T + Rall)
         Padded[:n, n:] = P[:, :3] @ Gx.T  # TODO, top right corner of P_new
         # TODO, transpose of above. Should yield the same as calcualion, but this enforces symmetry and should be cheaper
         Padded[n:, :n] = (Padded[:n, n:]).T

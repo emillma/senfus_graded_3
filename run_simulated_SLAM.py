@@ -2,6 +2,7 @@
 from debugger import mes_diff
 from plotting import ellipse
 from EKFSLAM import EKFSLAM
+from EKFSLAM_other import EKFSLAM as EKFSLAM_other
 from typing import List, Optional
 
 from scipy.io import loadmat
@@ -36,8 +37,8 @@ K = len(z)
 M = len(landmarks)
 
 # %% Initilize
-Q = np.diag([0.01, 0.01, 0.001])  # TODO
-R = np.diag([0.01, 0.0001])  # TODO
+Q = np.diag([0.1, 0.1, 0.001])  # TODO Best
+R = np.diag([0.0025, 0.0004])  # TODO Best
 assert 0
 doAsso = True
 
@@ -49,8 +50,6 @@ JCBBalphas = np.array(
 
 
 slam = EKFSLAM(Q, R, do_asso=doAsso, alphas=JCBBalphas)
-eta = np.array([0, 0, 0, 1, 0])
-zpred = slam.h(eta)
 
 
 # allocate
@@ -81,16 +80,13 @@ if doAssoPlot:
     figAsso, axAsso = plt.subplots(num=1, clear=True)
 
 # %% Run simulation
-N = 25
+N = 1000
 
 print("starting sim (" + str(N) + " iterations)")
 
 for k, z_k in tqdm(enumerate(z[:N])):
     eta_hat[k], P_hat[k], NIS[k], a[k] = slam.update(
         eta_pred[k], P_pred[k], z_k)  # TODO update
-
-    print(eta_hat[k].shape)
-
     if k < K - 1:
         # TODO predict
         eta_pred[k + 1], P_pred[k +
