@@ -1,9 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg as la
+from scipy.stats import chi2
 from celluloid import Camera
 from tqdm import tqdm
+import utils
+import plott_setup
 
+from scipy.stats import chi2
 
 def ellipse(mu, P, s, n):
     thetas = np.linspace(0, 2*np.pi, n)
@@ -26,7 +30,7 @@ def plot_trajectory(pose_est, poseGT, P_hat,  N):
             color='g', alpha=0.2)
 
 
-def plot_path():
+def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N, mins, maxs):
     fig2, ax2 = plt.subplots(num=2, clear=True)
     # landmarks
     ax2.scatter(*landmarks.T, c="r", marker="^")
@@ -60,7 +64,7 @@ def plot_NIS(NISnorm, CInorm, N):
     ax3.set_title(f'NIS, {insideCI.mean()*100}% inside CI')
 
 
-def plot_NEES():
+def plot_NEES(NEESes, alpha, N):
     # NEES
     fig4, ax4 = plt.subplots(nrows=3, ncols=1, figsize=(
         7, 5), num=4, clear=True, sharex=True)
@@ -84,7 +88,7 @@ def plot_NEES():
 # %% RMSE
 
 
-def plot_RMSE():
+def plot_RMSE(pose_est, poseGT, N, mins, maxs):
     fig5, ax5 = plt.subplots(nrows=2, ncols=1, figsize=(
         7, 5), num=5, clear=True, sharex=True)
 
