@@ -22,6 +22,10 @@ from plotting import ellipse
 from vp_utils import detectTrees, odometry, Car
 from utils import rotmat2d
 
+from tqdm import tqdm
+from plott_setup import setup_plot
+from plotting import *
+setup_plot()
 # %% plot config check and style setup
 
 
@@ -106,14 +110,17 @@ b = 0.5  # laser distance to the left of center
 
 car = Car(L, H, a, b)
 
-sigmas =  # TODO
-CorrCoeff = np.array([[1, 0, 0], [0, 1, 0.9], [0, 0.9, 1]])
-Q = np.diag(sigmas) @ CorrCoeff @ np.diag(sigmas)
+# sigmas = np.array([1, 1, 0.12]) * 1e-3 # TODO
+# CorrCoeff = np.array([[1, 0, 0], [0, 1, 0.9], [0, 0.9, 1]])
+# Q = np.diag(sigmas) @ CorrCoeff @ np.diag(sigmas)
 
-R =  # TODO
+# R = np.diag([0.08 ** 2, 0.02 ** 2]) # TODO
+
+Q = np.diag([0.1, 0.1, 0.001])  # TODO Best
+R = np.diag([0.0025, 0.0004])
 
 JCBBalphas = np.array(
-    # TODO
+   [1e-4, 1e-6]  # TODO
 )
 sensorOffset = np.array([car.a + car.L, car.b])
 doAsso = True
@@ -142,9 +149,9 @@ mk = mk_first
 t = timeOdo[0]
 
 # %%  run
-N = 1000  # K
+N = 10000  # K = 61945 is max?
 
-doPlot = False
+doPlot = True
 
 lh_pose = None
 
@@ -179,10 +186,10 @@ for k in tqdm(range(N)):
         # ? reset time to this laser time for next post predict
         t = timeLsr[mk]
         odo = odometry(speed[k + 1], steering[k + 1], dt, car)
-        eta, P =  # TODO predict
+        eta, P = slam.predict(eta, P, odo)# TODO predict
 
         z = detectTrees(LASER[mk])
-        eta, P, NIS[mk], a[mk] =  # TODO update
+        eta, P, NIS[mk], a[mk] =  slam.update(eta, P, z)# TODO update
 
         num_asso = np.count_nonzero(a[mk] > -1)
 
@@ -265,3 +272,5 @@ ax6.set(
 plt.show()
 
 # %%
+
+
