@@ -9,6 +9,7 @@ import plott_setup
 
 from scipy.stats import chi2
 
+
 def ellipse(mu, P, s, n):
     thetas = np.linspace(0, 2*np.pi, n)
     ell = mu + s * (la.cholesky(P).T @
@@ -44,7 +45,7 @@ def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N, mins, maxs):
 
     ax2.plot(*poseGT.T[:2], c="r", label="gt")
     ax2.plot(*pose_est.T[:2], c="g", label="est")
-    ax2.plot(*ellipse(pose_est[-1, :2], P_hat[N - 1][:2, :2], 5, 200).T, c="g")
+    ax2.plot(*ellipse(pose_est[-1, :2], P_hat[N - 1][:2, :2], 1, 30).T, c="g")
     ax2.set(title="results", xlim=(mins[0], maxs[0]), ylim=(mins[1], maxs[1]))
     ax2.axis("equal")
     ax2.grid()
@@ -138,7 +139,7 @@ def play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N):
         ax_movie.scatter(*lmk_est[k].T, c="b", marker=".")
 
         if k > 0:
-            el = ellipse(pose_est[k, :2], P_hat[k][:2, :2], 1, 100)
+            el = ellipse(pose_est[k, :2], P_hat[k][:2, :2], 5, 100)
             ax_movie.plot(*el.T, "g")
 
         numLmk = lmk_est[k].shape[0]
