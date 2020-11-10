@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
 from multiprocessing import Process, Queue
 import time
+from runSLAM import run_slam_simulated
+import numpy as np
 
 
 def get_output(func, q, *args):
@@ -20,6 +22,22 @@ def timeout(func, args, timeout):
     data = None if q.empty() else q.get()
     p.terminate()
     return data
+
+
+def cost_function(*args):
+    (Q, R, JCBBalphas, eta_pred_init, P_pred_init,
+        odometry, z, poseGT, N, alpha, do_asso, doAssoPlot) = args
+
+    retval = run_slam_simulated(*args)
+    (eta_pred, P_pred, eta_hat, P_hat, a, NIS, NISnorm, CI, CInorm, NEES) = retval
+    posehat = np.vstack([i[:3] for i in eta_hat[:N]])
+    RMSE_pos = np.linalg.norm(
+        (posehat - poseGT[:N])[:, :2], axis=1)
+
+    RMSE_hed = np.linalg.norm(
+        (posehat - poseGT[:N])[:, :2], axis=1)
+
+    return RMSE_pos
 
 
 def f(a):

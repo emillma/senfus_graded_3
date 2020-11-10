@@ -22,8 +22,9 @@ def plot_trajectory(pose_est, poseGT, P_hat,  N):
     fig, ax = plt.subplots(3)
     time = np.arange(N)
     for i, name in enumerate(['x', 'y', 'theta']):
-        ax[i].plot(time, pose_est[:N, i], c='g')
+
         ax[i].plot(time, poseGT[:N, i], c='r')
+        ax[i].plot(time, pose_est[:N, i], c='g')
         ax[i].fill_between(
             time,
             pose_est[:N, i] - np.array([P[i, i]/2 for P in P_hat[:N]]),
@@ -41,7 +42,7 @@ def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N):
     mins -= offsets
     maxs += offsets
 
-    fig2, ax2 = plt.subplots(num=2, clear=True)
+    fig2, ax2 = plt.subplots()
     # landmarks
     ax2.scatter(*landmarks.T, c="r", marker="^")
     ax2.scatter(*lmk_est_final.T, c="b", marker=".")
@@ -52,12 +53,13 @@ def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N):
         el = ellipse(lmk_l, rI, 1, 200)
         ax2.plot(*el.T, "b")
 
-    ax2.plot(*poseGT.T[:2], c="r", label="gt")
-    ax2.plot(*pose_est.T[:2], c="g", label="est")
+    ax2.plot(*poseGT.T[:2, :N], c="r", label="gt")
+    ax2.plot(*pose_est.T[:2, :N], c="g", label="est")
     ax2.plot(*ellipse(pose_est[-1, :2], P_hat[N - 1][:2, :2], 1, 30).T, c="g")
     ax2.set(title="results", xlim=(mins[0], maxs[0]), ylim=(mins[1], maxs[1]))
     ax2.axis("equal")
     ax2.grid()
+    ax2.legend()
 
 # %% Consistency
 
@@ -66,12 +68,12 @@ def plot_NIS(NISnorm, CInorm, N):
     # NIS
     insideCI = (CInorm[:N, 0] <= NISnorm[:N]) * (NISnorm[:N] <= CInorm[:N, 1])
 
-    fig3, ax3 = plt.subplots(num=3, clear=True)
+    fig3, ax3 = plt.subplots()
     ax3.plot(CInorm[:N, 0], '--')
     ax3.plot(CInorm[:N, 1], '--')
     ax3.plot(NISnorm[:N], lw=0.5)
-
-    ax3.set_title(f'NIS, {insideCI.mean()*100}% inside CI')
+    ax3.set_yscale('log')
+    ax3.set_title(f'NIS, {insideCI[:N].mean()*100}% inside CI')
 
 
 def plot_NEES(NEESes, alpha, N):
@@ -87,7 +89,9 @@ def plot_NEES(NEESes, alpha, N):
         ax.plot(np.full(N, CI_NEES[1]), '--')
         ax.plot(NEES[:N], lw=0.5)
         insideCI = (CI_NEES[0] <= NEES) * (NEES <= CI_NEES[1])
-        ax.set_title(f'NEES {tag}: {insideCI.mean()*100}% inside CI')
+        ax.set_title(
+            f'NEES {tag}: {insideCI[:N].mean()*100}% inside CI{(1-alpha)*100:.2f}')
+        ax.set_yscale('log')
 
         CI_ANEES = np.array(chi2.interval(alpha, df*N)) / N
         print(f"CI ANEES {tag}: {CI_ANEES}")

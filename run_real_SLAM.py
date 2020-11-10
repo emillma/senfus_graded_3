@@ -25,57 +25,8 @@ from utils import rotmat2d
 from tqdm import tqdm
 from plott_setup import setup_plot
 from plotting import *
+from plotting import *
 setup_plot()
-# %% plot config check and style setup
-
-
-# to see your plot config
-print(f"matplotlib backend: {matplotlib.get_backend()}")
-print(f"matplotlib config file: {matplotlib.matplotlib_fname()}")
-print(f"matplotlib config dir: {matplotlib.get_configdir()}")
-plt.close("all")
-
-# try to set separate window ploting
-if "inline" in matplotlib.get_backend():
-    print("Plotting is set to inline at the moment:", end=" ")
-
-    if "ipykernel" in matplotlib.get_backend():
-        print("backend is ipykernel (IPython?)")
-        print("Trying to set backend to separate window:", end=" ")
-        import IPython
-
-        IPython.get_ipython().run_line_magic("matplotlib", "")
-    else:
-        print("unknown inline backend")
-
-print("continuing with this plotting backend", end="\n\n\n")
-
-
-# set styles
-try:
-    # installed with "pip install SciencePLots" (https://github.com/garrettj403/SciencePlots.git)
-    # gives quite nice plots
-    plt_styles = ["science", "grid", "bright", "no-latex"]
-    plt.style.use(plt_styles)
-    print(f"pyplot using style set {plt_styles}")
-except Exception as e:
-    print(e)
-    print("setting grid and only grid and legend manually")
-    plt.rcParams.update(
-        {
-            # setgrid
-            "axes.grid": True,
-            "grid.linestyle": ":",
-            "grid.color": "k",
-            "grid.alpha": 0.5,
-            "grid.linewidth": 0.5,
-            # Legend
-            "legend.frameon": True,
-            "legend.framealpha": 1.0,
-            "legend.fancybox": True,
-            "legend.numpoints": 1,
-        }
-    )
 
 # %% Load data
 VICTORIA_PARK_PATH = "./victoria_park/"
@@ -102,14 +53,13 @@ mK = timeLsr.size
 Kgps = timeGps.size
 
 # %% Parameters
-
 L = 2.83  # axel distance
 H = 0.76  # center to wheel encoder
 a = 0.95  # laser distance in front of first axel
 b = 0.5  # laser distance to the left of center
 
 car = Car(L, H, a, b)
-
+# odometry = get_odometry(speed, steering, dt, car)
 # sigmas = np.array([1, 1, 0.12]) * 1e-3 # TODO
 # CorrCoeff = np.array([[1, 0, 0], [0, 1, 0.9], [0, 0.9, 1]])
 # Q = np.diag(sigmas) @ CorrCoeff @ np.diag(sigmas)
@@ -120,7 +70,7 @@ Q = np.diag([0.1, 0.1, 0.001])  # TODO Best
 R = np.diag([0.0025, 0.0004])
 
 JCBBalphas = np.array(
-   [1e-4, 1e-6]  # TODO
+    [1e-4, 1e-6]  # TODO
 )
 sensorOffset = np.array([car.a + car.L, car.b])
 doAsso = True
@@ -133,6 +83,7 @@ alpha = 0.05
 confidence_prob = 1 - alpha
 
 xupd = np.zeros((mK, 3))
+P_all = []
 a = [None] * mK
 NIS = np.zeros(mK)
 NISnorm = np.zeros(mK)
@@ -149,9 +100,9 @@ mk = mk_first
 t = timeOdo[0]
 
 # %%  run
-N = 10000  # K = 61945 is max?
+N = 3000  # K = 61945 is max?
 
-doPlot = True
+doPlot = False
 
 lh_pose = None
 
@@ -173,6 +124,7 @@ if do_raw_prediction:  # TODO: further processing such as plotting
         odox[k + 1], _ = slam.predict(odox[k], P, odos[k + 1])
 
 for k in tqdm(range(N)):
+    P_all.append(P)
     if mk < mK - 1 and timeLsr[mk] <= timeOdo[k + 1]:
         # Force P to symmetric: there are issues with long runs (>10000 steps)
         # seem like the prediction might be introducing some minor asymetries,
@@ -186,10 +138,10 @@ for k in tqdm(range(N)):
         # ? reset time to this laser time for next post predict
         t = timeLsr[mk]
         odo = odometry(speed[k + 1], steering[k + 1], dt, car)
-        eta, P = slam.predict(eta, P, odo)# TODO predict
+        eta, P = slam.predict(eta, P, odo)  # TODO predict
 
         z = detectTrees(LASER[mk])
-        eta, P, NIS[mk], a[mk] =  slam.update(eta, P, z)# TODO update
+        eta, P, NIS[mk], a[mk] = slam.update(eta, P, z)  # TODO update
 
         num_asso = np.count_nonzero(a[mk] > -1)
 
@@ -265,12 +217,19 @@ if do_raw_prediction:
 # %%
 fig6, ax6 = plt.subplots(num=6, clear=True)
 ax6.scatter(*eta[3:].reshape(-1, 2).T, color="r", marker="x")
+ax6.scatter(
+    Lo_m[timeGps < timeOdo[N - 1]],
+    La_m[timeGps < timeOdo[N - 1]],
+    c="b",
+    marker=".",
+    label="GPS",
+)
 ax6.plot(*xupd[mk_first:mk, :2].T)
 ax6.set(
     title=f"Steps {k}, laser scans {mk-1}, landmarks {len(eta[3:])//2},\nmeasurements {z.shape[0]}, num new = {np.sum(a[mk] == -1)}"
 )
+
+
 plt.show()
 
 # %%
-
-
