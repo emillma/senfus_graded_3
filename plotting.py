@@ -31,7 +31,16 @@ def plot_trajectory(pose_est, poseGT, P_hat,  N):
             color='g', alpha=0.2)
 
 
-def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N, mins, maxs):
+def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N):
+    mins = np.amin(landmarks, axis=0)
+    maxs = np.amax(landmarks, axis=0)
+
+    ranges = maxs - mins
+    offsets = ranges * 0.2
+
+    mins -= offsets
+    maxs += offsets
+
     fig2, ax2 = plt.subplots(num=2, clear=True)
     # landmarks
     ax2.scatter(*landmarks.T, c="r", marker="^")
@@ -89,7 +98,7 @@ def plot_NEES(NEESes, alpha, N):
 # %% RMSE
 
 
-def plot_RMSE(pose_est, poseGT, N, mins, maxs):
+def plot_RMSE(pose_est, poseGT, N):
     fig5, ax5 = plt.subplots(nrows=2, ncols=1, figsize=(
         7, 5), num=5, clear=True, sharex=True)
 
@@ -100,6 +109,7 @@ def plot_RMSE(pose_est, poseGT, N, mins, maxs):
 
     ylabels = ['m', 'deg']
     scalings = np.array([1, 180/np.pi])
+    tags = ['all', 'pos', 'heading']
     for ax, err, tag, ylabel, scaling in zip(ax5, errs, tags[1:], ylabels, scalings):
         ax.plot(err*scaling)
         ax.set_title(
