@@ -52,7 +52,7 @@ def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N):
     for l, lmk_l in enumerate(lmk_est_final):
         idxs = slice(3 + 2 * l, 3 + 2 * l + 2)
         rI = P_hat[N - 1][idxs, idxs]
-        el = ellipse(lmk_l, rI, 1, 200)
+        el = ellipse(lmk_l, rI, 2, 200)
         ax2.plot(*el.T, "b")
 
     ax2.plot(*poseGT.T[:2, :N], c="r", label="gt")
@@ -188,7 +188,7 @@ def play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N):
         for l, lmk_l in enumerate(lmk_est[k]):
             idxs = slice(3 + 2 * l, 3 + 2 * l + 2)
             rI = P_hat[k][idxs, idxs]
-            el = ellipse(lmk_l, rI, 5, 200)
+            el = ellipse(lmk_l, rI, 2, 200)
             ax_movie.plot(*el.T, "b")
 
         camera.snap()
