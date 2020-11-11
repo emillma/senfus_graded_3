@@ -19,17 +19,19 @@ def ellipse(mu, P, s, n):
 
 def plot_trajectory(pose_est, poseGT, P_hat,  N):
 
-    fig, ax = plt.subplots(3)
+    fig, axs = plt.subplots(3)
     time = np.arange(N)
-    for i, name in enumerate(['x', 'y', 'theta']):
+    names = ['x', 'y', 'heading']
+    ylabels = ['m', 'm', 'rad']
 
-        ax[i].plot(time, poseGT[:N, i], c='r')
-        ax[i].plot(time, pose_est[:N, i], c='g')
-        ax[i].fill_between(
-            time,
-            pose_est[:N, i] - np.array([P[i, i]/2 for P in P_hat[:N]]),
-            pose_est[:N, i] + np.array([P[i, i]/2 for P in P_hat[:N]]),
-            color='g', alpha=0.2)
+    for ax, state, GT, name, ylabel in zip(
+            axs, pose_est[:, :3].T, poseGT[:, :3].T, names, ylabels):
+
+        ax.plot(GT, c='r', label='gt')
+        ax.plot(state, c='g', label='estimate')
+        ax.set_title(f'Estmatated {name}')
+        ax.set_ylabel(f'[{ylabel}])')
+        ax.legend()
 
 
 def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N):
@@ -73,7 +75,8 @@ def plot_NIS(NISnorm, CInorm, N):
     ax3.plot(CInorm[:N, 1], '--')
     ax3.plot(NISnorm[:N], lw=0.5)
     ax3.set_yscale('log')
-    ax3.set_title(f'NIS, {insideCI[:N].mean()*100}% inside CI')
+    ax3.set_title(f'NIS, {insideCI[:N].mean()*100}% inside CI, '
+                  f'(ANIS={np.mean(NISnorm[:N]):.3f})')
 
 
 def plot_NEES(NEESes, alpha, N):
@@ -91,7 +94,8 @@ def plot_NEES(NEESes, alpha, N):
         insideCI = (CI_NEES[0] <= NEES) * (NEES <= CI_NEES[1])
         ax.set_title(
             f'NEES {tag}: '
-            f'{insideCI[:N].mean()*100}% inside {(alpha)*100:.2f}% CI')
+            f'{insideCI[:N].mean()*100}% inside {(alpha)*100:.2f}% CI, '
+            f'(ANEES={np.mean(NEES[:N]):.3f})')
         ax.set_yscale('log')
 
         CI_ANEES = np.array(chi2.interval(alpha, df*N)) / N
@@ -103,32 +107,41 @@ def plot_NEES(NEESes, alpha, N):
 # %% RMSE
 
 
-def plot_error(pose_est, poseGT, N):
-    fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(
-        7, 5), num=5, clear=True, sharex=True)
+def plot_error(pose_est, poseGT, P_hat, N):
+    fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True)
+
     pose_err = pose_est[:N, :3] - poseGT[:N, :3]
     pose_err[:, 2] *= 180/np.pi
-    ylabels = ['x', 'y', 'theta']
-    for ax, err, ylabel, in zip(ax, pose_err.T, ylabels):
-        ax.plot(err)
-
+    ylabels = ['m', 'm', 'deg']
+    tags = ['x error', 'y error', 'heading error']
+    std = np.sqrt(np.vstack([P[np.diag_indices(3)] for P in P_hat[:N]]))
+    std[:, 2] *= 180/np.pi
+    for ax, err, std, tag, ylabel, in zip(ax, pose_err.T, std.T, tags, ylabels):
+        ax.plot(err, label='error')
+        ax.fill_between(
+            np.arange(std.size),
+            -std,
+            std,
+            color='g', alpha=0.2, label='estimated STD')
+        ax.set_title(
+            f"{tag}")
         ax.set_ylabel(f"[{ylabel}]")
         ax.grid()
+        ax.legend()
     fig.tight_layout()
 
 
 def plot_RMSE(pose_est, poseGT, N):
-    fig5, ax5 = plt.subplots(nrows=2, ncols=1, figsize=(
-        7, 5), num=5, clear=True, sharex=True)
+    fig5, ax5 = plt.subplots(nrows=2, ncols=1, sharex=True)
 
     pos_err = np.linalg.norm(pose_est[:N, :2] - poseGT[:N, :2], axis=1)
-    heading_err = utils.wrapToPi(pose_est[:N, 2] - poseGT[:N, 2])
+    heading_err = np.abs(utils.wrapToPi(pose_est[:N, 2] - poseGT[:N, 2]))
 
     errs = np.vstack((pos_err, heading_err))
 
     ylabels = ['m', 'deg']
     scalings = np.array([1, 180/np.pi])
-    tags = ['all', 'position', 'heading']
+    tags = ['total error', 'position error', 'heading error']
     for ax, err, tag, ylabel, scaling in zip(ax5, errs, tags[1:], ylabels, scalings):
         ax.plot(err*scaling)
         ax.set_title(

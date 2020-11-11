@@ -13,9 +13,9 @@ def run_slam_simulated(Q, R, JCBBalphas, eta_pred_init, P_pred_init,
     slam = EKFSLAM(Q, R, do_asso=do_asso, alphas=JCBBalphas)
 
     axAsso = None
-    # if doAssoPlot:
-    #     figAsso, axAsso = plt.subplots()
-    # allocate
+    if doAssoPlot:
+        figAsso, axAsso = plt.subplots()
+
     eta_pred: List[Optional[np.ndarray]] = [None] * K
     P_pred: List[Optional[np.ndarray]] = [None] * K
     eta_hat: List[Optional[np.ndarray]] = [None] * K
@@ -56,21 +56,21 @@ def run_slam_simulated(Q, R, JCBBalphas, eta_pred_init, P_pred_init,
 
         NEES[k] = EKFSLAM.NEESes(eta_hat[k][:3], P_hat[k][:3, :3], poseGT[k])
 
-        # if doAssoPlot and k > 0:
-        #     axAsso.clear()
-        #     axAsso.grid()
-        #     zpred = slam.h(eta_pred[k]).reshape(-1, 2)
-        #     axAsso.scatter(z_k[:, 0], z_k[:, 1], label="z")
-        #     axAsso.scatter(zpred[:, 0], zpred[:, 1], label="zpred")
-        #     xcoords = np.block(
-        #         [[z_k[a[k] > -1, 0]], [zpred[a[k][a[k] > -1], 0]]]).T
-        #     ycoords = np.block(
-        #         [[z_k[a[k] > -1, 1]], [zpred[a[k][a[k] > -1], 1]]]).T
-        #     for x, y in zip(xcoords, ycoords):
-        #         axAsso.plot(x, y, lw=3, c="r")
-        #     axAsso.legend()
-        #     axAsso.set_title(
-        #         f"k = {k}, {np.count_nonzero(a[k] > -1)} associations")
-        #     plt.draw()
-        #     plt.pause(0.001)
+        if doAssoPlot and k > 0:
+            axAsso.clear()
+            axAsso.grid()
+            zpred = slam.h(eta_pred[k]).reshape(-1, 2)
+            axAsso.scatter(z_k[:, 0], z_k[:, 1], label="z")
+            axAsso.scatter(zpred[:, 0], zpred[:, 1], label="zpred")
+            xcoords = np.block(
+                [[z_k[a[k] > -1, 0]], [zpred[a[k][a[k] > -1], 0]]]).T
+            ycoords = np.block(
+                [[z_k[a[k] > -1, 1]], [zpred[a[k][a[k] > -1], 1]]]).T
+            for x, y in zip(xcoords, ycoords):
+                axAsso.plot(x, y, lw=3, c="r")
+            axAsso.legend()
+            axAsso.set_title(
+                f"k = {k}, {np.count_nonzero(a[k] > -1)} associations")
+            plt.draw()
+            plt.pause(0.001)
     return eta_pred, P_pred, eta_hat, P_hat, a, NIS, NISnorm, CI, CInorm, NEES
