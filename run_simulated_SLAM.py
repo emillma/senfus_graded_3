@@ -29,10 +29,12 @@ K = len(z)
 # M = len(landmarks)
 
 # %% Initilize
-Q = np.diag([0.2, 0.2, 0.0005])  # TODO Best
-Q = np.diag([0.0012, 0.0012, 0.00007])  # TODO Best
-R = np.diag([0.0025, 0.003])  # TODO Best
-R = np.diag([0.002, 0.0005])  # TODO Best
+Q = np.diag([0.2, 0.2, 0.001])  # TODO Best
+Q = np.diag([0.2, 0.2, 0.001])  # TODO Best
+# Q = np.diag([0.0012, 0.0012, 0.00007])  # TODO Best
+R = np.diag([0.0025, 0.01])  # TODO Best
+R = np.diag([0.0025, 0.01])  # TODO Best
+# R = np.diag([0.002, 0.0005])  # TODO Best
 # assert 0
 do_asso = True
 
@@ -46,7 +48,7 @@ JCBBalphas = np.array(
 # or by the size of the association search space.
 
 alpha = 0.95
-N = 1000
+N = 100
 
 eta_pred_init = poseGT[0]  # we start at the correct position for reference
 P_pred_init = np.zeros((3, 3))
