@@ -66,7 +66,7 @@ def plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N):
 # %% Consistency
 
 
-def plot_NIS(NISnorm, CInorm, N):
+def plot_NIS(NISnorm, CInorm, alpha, N):
     # NIS
     insideCI = (CInorm[:N, 0] <= NISnorm[:N]) * (NISnorm[:N] <= CInorm[:N, 1])
 
@@ -75,14 +75,14 @@ def plot_NIS(NISnorm, CInorm, N):
     ax3.plot(CInorm[:N, 1], '--')
     ax3.plot(NISnorm[:N], lw=0.5)
     ax3.set_yscale('log')
-    ax3.set_title(f'NIS, {insideCI[:N].mean()*100}% inside CI, '
-                  f'(ANIS={np.mean(NISnorm[:N]):.3f})')
+    ax3.set_title(
+        f'NIS, {insideCI[:N].mean()*100}% inside {(alpha)*100:.2f}% CI, '
+        f'(ANIS={np.mean(NISnorm[:N]):.3f})')
 
 
 def plot_NEES(NEESes, alpha, N):
     # NEES
-    fig4, ax4 = plt.subplots(nrows=3, ncols=1, figsize=(
-        7, 5), num=4, clear=True, sharex=True)
+    fig4, ax4 = plt.subplots(nrows=3, ncols=1, sharex=True)
     tags = ['all', 'pos', 'heading']
     dfs = [3, 2, 1]
 
@@ -124,7 +124,7 @@ def plot_error(pose_est, poseGT, P_hat, N):
             std,
             color='g', alpha=0.2, label='estimated STD')
         ax.set_title(
-            f"{tag}")
+            f"{tag} (RMSE={np.sqrt((err**2).mean()):.3f}{ylabel})")
         ax.set_ylabel(f"[{ylabel}]")
         ax.grid()
         ax.legend()
@@ -181,7 +181,7 @@ def play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N):
         ax_movie.scatter(*lmk_est[k].T, c="b", marker=".")
 
         if k > 0:
-            el = ellipse(pose_est[k, :2], P_hat[k][:2, :2], 5, 100)
+            el = ellipse(pose_est[k, :2], P_hat[k][:2, :2], 1, 40)
             ax_movie.plot(*el.T, "g")
 
         numLmk = lmk_est[k].shape[0]

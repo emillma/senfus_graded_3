@@ -29,10 +29,10 @@ K = len(z)
 # M = len(landmarks)
 
 # %% Initilize
-Q = np.diag([0.2, 0.2, 0.001])  # TODO Best
-Q = np.diag([0.0015, 0.0015, 0.0001])  # TODO Best
+Q = np.diag([0.2, 0.2, 0.0005])  # TODO Best
+Q = np.diag([0.0012, 0.0012, 0.00007])  # TODO Best
 R = np.diag([0.0025, 0.003])  # TODO Best
-R = np.diag([0.002, 0.0006])  # TODO Best
+R = np.diag([0.002, 0.0005])  # TODO Best
 # assert 0
 do_asso = True
 
@@ -139,11 +139,10 @@ mins -= offsets
 maxs += offsets
 
 # %% Plotting of results
-# movie = play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
+movie = play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
 plot_trajectory(pose_est, poseGT, P_hat, N)
 plot_error(pose_est, poseGT, P_hat, N)
-plot_RMSE(pose_est, poseGT, N)
 plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N)
-plot_NIS(NISnorm, CInorm, N)
+plot_NIS(NISnorm, CInorm, alpha, N)
 plot_NEES(NEES, alpha, N)
 plt.show()

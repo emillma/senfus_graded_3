@@ -180,7 +180,6 @@ class EKFSLAM:
                    - rotmat2d(x[2]) @ (self.sensor_offset).reshape(2, 1))
 
         # TODO, predicted measurements in cartesian coordinates, beware sensor offset for VP
-
         zpred_r = np.linalg.norm(delta_m.T, axis=1)  # TODO, ranges
         zpred_theta = wrapToPi(np.arctan2(delta_m[1, :], delta_m[0, :])
                                - x[2])
