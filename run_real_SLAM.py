@@ -66,8 +66,8 @@ car = Car(L, H, a, b)
 
 # R = np.diag([0.08 ** 2, 0.02 ** 2]) # TODO
 
-Q = np.diag([0.1, 0.1, 0.001])  # TODO Best
-R = np.diag([0.0025, 0.0004])
+Q = np.diag([0.01, 0.01, 0.0001])  # TODO Best
+R = np.diag([0.25, 0.0025])
 
 JCBBalphas = np.array(
     [1e-4, 1e-6]  # TODO
@@ -92,7 +92,8 @@ CInorm = np.zeros((mK, 2))
 
 # Initialize state
 # you might want to tweak these for a good reference
-eta = np.array([Lo_m[0], La_m[1], 36 * np.pi / 180])
+eta = np.array([Lo_m[0], La_m[1], 30 * np.pi / 180])
+# eta = np.array([Lo_m[0], La_m[1], 126 * np.pi / 180])
 P = np.zeros((3, 3))
 
 mk_first = 1  # first seems to be a bit off in timing
@@ -100,7 +101,7 @@ mk = mk_first
 t = timeOdo[0]
 
 # %%  run
-N = 3000  # K = 61945 is max?
+N = K  # K = 61945 is max?
 
 doPlot = False
 

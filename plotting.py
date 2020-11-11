@@ -90,7 +90,8 @@ def plot_NEES(NEESes, alpha, N):
         ax.plot(NEES[:N], lw=0.5)
         insideCI = (CI_NEES[0] <= NEES) * (NEES <= CI_NEES[1])
         ax.set_title(
-            f'NEES {tag}: {insideCI[:N].mean()*100}% inside CI{(1-alpha)*100:.2f}')
+            f'NEES {tag}: '
+            f'{insideCI[:N].mean()*100}% inside {(alpha)*100:.2f}% CI')
         ax.set_yscale('log')
 
         CI_ANEES = np.array(chi2.interval(alpha, df*N)) / N
@@ -102,22 +103,36 @@ def plot_NEES(NEESes, alpha, N):
 # %% RMSE
 
 
+def plot_error(pose_est, poseGT, N):
+    fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(
+        7, 5), num=5, clear=True, sharex=True)
+    pose_err = pose_est[:N, :3] - poseGT[:N, :3]
+    pose_err[:, 2] *= 180/np.pi
+    ylabels = ['x', 'y', 'theta']
+    for ax, err, ylabel, in zip(ax, pose_err.T, ylabels):
+        ax.plot(err)
+
+        ax.set_ylabel(f"[{ylabel}]")
+        ax.grid()
+    fig.tight_layout()
+
+
 def plot_RMSE(pose_est, poseGT, N):
     fig5, ax5 = plt.subplots(nrows=2, ncols=1, figsize=(
         7, 5), num=5, clear=True, sharex=True)
 
     pos_err = np.linalg.norm(pose_est[:N, :2] - poseGT[:N, :2], axis=1)
-    heading_err = np.abs(utils.wrapToPi(pose_est[:N, 2] - poseGT[:N, 2]))
+    heading_err = utils.wrapToPi(pose_est[:N, 2] - poseGT[:N, 2])
 
     errs = np.vstack((pos_err, heading_err))
 
     ylabels = ['m', 'deg']
     scalings = np.array([1, 180/np.pi])
-    tags = ['all', 'pos', 'heading']
+    tags = ['all', 'position', 'heading']
     for ax, err, tag, ylabel, scaling in zip(ax5, errs, tags[1:], ylabels, scalings):
         ax.plot(err*scaling)
         ax.set_title(
-            f"{tag}: RMSE {np.sqrt((err**2).mean())*scaling} {ylabel}")
+            f"{tag}: RMSE {np.sqrt((err**2).mean())*scaling:.3f} {ylabel}")
         ax.set_ylabel(f"[{ylabel}]")
         ax.grid()
 
@@ -138,7 +153,7 @@ def play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N):
     maxs += offsets
 
     pauseTime = 0.05
-    fig_movie, ax_movie = plt.subplots(num=6, clear=True)
+    fig_movie, ax_movie = plt.subplots()
 
     camera = Camera(fig_movie)
 

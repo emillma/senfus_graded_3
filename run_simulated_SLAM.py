@@ -41,7 +41,7 @@ JCBBalphas = np.array(
 # or by the size of the association search space.
 
 alpha = 0.95
-N = 1000
+N = 200
 
 eta_pred_init = poseGT[0]  # we start at the correct position for reference
 P_pred_init = np.zeros((3, 3))
@@ -76,9 +76,11 @@ mins -= offsets
 maxs += offsets
 
 # %% Plotting of results
-# play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
-plot_trajectory(pose_est, poseGT, P_hat, N)
-plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N)
-plot_NIS(NISnorm, CInorm, N)
-plot_NEES(NEES, alpha, N)
+# movie = play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
+# plot_trajectory(pose_est, poseGT, P_hat, N)
+plot_error(pose_est, poseGT, N)
+plot_RMSE(pose_est, poseGT, N)
+# plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N)
+# plot_NIS(NISnorm, CInorm, N)
+# plot_NEES(NEES, alpha, N)
 plt.show()
