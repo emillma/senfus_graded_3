@@ -250,10 +250,10 @@ class EKFSLAM:
 
         H[1::2, :2] = -(rpi_2@delta_m_normalized).T / delta_m_norm[:, None]
         H[1::2, 2] = -1
-        drdm_indices = (np.repeat(np.arange(1, 2 * numM, 2), 2),
-                        np.arange(0, 2 * numM)+3)
-        H[drdm_indices] = ((rpi_2@delta_m_normalized).T
-                           / delta_m_norm[:, None]).ravel()
+        dthedadm_indices = (np.repeat(np.arange(1, 2 * numM, 2), 2),
+                            np.arange(0, 2 * numM)+3)
+        H[dthedadm_indices] = ((rpi_2@delta_m_normalized).T
+                               / delta_m_norm[:, None]).ravel()
         # proposed way is to go through landmarks one by one
         # preallocate and update this for some speed gain if looping
 
