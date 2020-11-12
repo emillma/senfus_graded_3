@@ -1,4 +1,5 @@
 # %% Imports
+from numpy.core.shape_base import block
 from numpy.lib.twodim_base import eye
 from scipy.io import loadmat
 from scipy.stats import chi2
@@ -102,16 +103,16 @@ mk = mk_first
 t = timeOdo[0]
 
 # %%  run
-N = 4000  # K = 61945 is max?
+N = 2500  # K = 61945 is max?
 
 doPlot = False
 
 lh_pose = None
 
 ax = None
-if doPlot:
+if doPlot or True:
     fig, ax = plt.subplots(num=1, clear=True)
-
+    plt.show(block=False)
     # lh_pose = ax.plot(eta[0], eta[1], "k", lw=3)[0]
     # sh_lmk = ax.scatter(np.nan, np.nan, c="r", marker="x")
     # sh_Z = ax.scatter(np.nan, np.nan, c="b", marker=".")
@@ -158,7 +159,7 @@ for k in tqdm(range(N)):
 
         xupd[mk] = eta[:3]
 
-        if doPlot:
+        if doPlot or (timeLsr[mk+1] >= timeOdo[N]):
             ax.clear()
 
             ax.scatter(*eta[3:].reshape(-1, 2).T, c="r", marker="x")
@@ -174,20 +175,19 @@ for k in tqdm(range(N)):
                 # sh_Z.set_offsets(zinmap.T)
                 ax.scatter(*zinmap, c="b", marker=".")
             ax.plot(*xupd[mk_first:mk, :2].T, "k", lw=3)
-            # el = ellipse(eta[:2], P[:2, :2], 2, 40)
-            # ax.plot(*el.T, "g", lw=3)
+            el = ellipse(eta[:2], P[:2, :2], 2, 40)
+            ax.plot(*el.T, "g")
             for i in range(eta[3::2].size):
                 i *= 2
                 el = ellipse(eta[3:][i:i+2], P[3:, 3:][i:i+2, i:i+2], 2, 40)
-                ax.plot(*el.T, c="b")
+                ax.plot(*el.T, c="purple")
 
             ax.set(
                 xlim=[-200, 200],
                 ylim=[-200, 200],
                 title=f"step {k}, laser scan {mk}, landmarks {len(eta[3:])//2},\nmeasurements {z.shape[0]}, num new = {np.sum(a[mk] == -1)}",
             )
-            plt.draw()
-            plt.pause(0.1)
+            plt.pause(0.01)
             # input('press enter')
 
         mk += 1
