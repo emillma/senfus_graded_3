@@ -181,7 +181,7 @@ def play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N):
         ax_movie.scatter(*lmk_est[k].T, c="b", marker=".")
 
         if k > 0:
-            el = ellipse(pose_est[k, :2], P_hat[k][:2, :2], 1, 40)
+            el = ellipse(pose_est[k, :2], P_hat[k][:2, :2], 2, 40)
             ax_movie.plot(*el.T, "g")
 
         numLmk = lmk_est[k].shape[0]

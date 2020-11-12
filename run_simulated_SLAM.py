@@ -32,6 +32,7 @@ K = len(z)
 Q = np.diag([0.2, 0.2, 0.001])  # TODO Best
 Q = np.diag([0.2, 0.2, 0.001])  # TODO Best
 Q = np.diag([0.0012, 0.0012, 0.00007])  # TODO Best
+
 R = np.diag([0.0025, 0.01])  # TODO Best
 R = np.diag([0.0025, 0.01])  # TODO Best
 R = np.diag([0.002, 0.0005])  # TODO Best
@@ -42,7 +43,7 @@ JCBBalphas = np.array(
     [10e-4, 10e-6]  # TODO,
 )   # first is for joint compatibility, second is individual
 JCBBalphas = np.array(
-    [10e-6, 10e-8]  # TODO,
+    [1e-4, 1e-6]  # TODO,
 )   # first is for joint compatibility, second is individual
 # these can have a large effect on runtime either through the number of landmarks created
 # or by the size of the association search space.
@@ -141,7 +142,7 @@ mins -= offsets
 maxs += offsets
 
 # %% Plotting of results
-movie = play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
+# movie = play_movie(pose_est, poseGT, lmk_est, landmarks, P_hat, N)
 plot_trajectory(pose_est, poseGT, P_hat, N)
 plot_error(pose_est, poseGT, P_hat, N)
 plot_path(pose_est, poseGT, lmk_est_final, landmarks, P_hat, N)

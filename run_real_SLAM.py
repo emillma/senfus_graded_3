@@ -1,4 +1,5 @@
 # %% Imports
+from numpy.lib.twodim_base import eye
 from scipy.io import loadmat
 from scipy.stats import chi2
 
@@ -101,31 +102,31 @@ mk = mk_first
 t = timeOdo[0]
 
 # %%  run
-N = K  # K = 61945 is max?
+N = 4000  # K = 61945 is max?
 
 doPlot = False
 
 lh_pose = None
 
+ax = None
 if doPlot:
     fig, ax = plt.subplots(num=1, clear=True)
 
-    lh_pose = ax.plot(eta[0], eta[1], "k", lw=3)[0]
-    sh_lmk = ax.scatter(np.nan, np.nan, c="r", marker="x")
-    sh_Z = ax.scatter(np.nan, np.nan, c="b", marker=".")
+    # lh_pose = ax.plot(eta[0], eta[1], "k", lw=3)[0]
+    # sh_lmk = ax.scatter(np.nan, np.nan, c="r", marker="x")
+    # sh_Z = ax.scatter(np.nan, np.nan, c="b", marker=".")
 
-do_raw_prediction = True
+do_raw_prediction = False
 if do_raw_prediction:  # TODO: further processing such as plotting
     odos = np.zeros((K, 3))
     odox = np.zeros((K, 3))
-    odox[0] = eta
+    odox[0] = eta.copy()
 
     for k in range(min(N, K - 1)):
         odos[k + 1] = odometry(speed[k + 1], steering[k + 1], 0.025, car)
-        odox[k + 1], _ = slam.predict(odox[k], P, odos[k + 1])
+        odox[k + 1], _ = slam.predict(odox[k], P.copy(), odos[k + 1])
 
 for k in tqdm(range(N)):
-    P_all.append(P)
     if mk < mK - 1 and timeLsr[mk] <= timeOdo[k + 1]:
         # Force P to symmetric: there are issues with long runs (>10000 steps)
         # seem like the prediction might be introducing some minor asymetries,
@@ -158,7 +159,9 @@ for k in tqdm(range(N)):
         xupd[mk] = eta[:3]
 
         if doPlot:
-            sh_lmk.set_offsets(eta[3:].reshape(-1, 2))
+            ax.clear()
+
+            ax.scatter(*eta[3:].reshape(-1, 2).T, c="r", marker="x")
             if len(z) > 0:
                 zinmap = (
                     rotmat2d(eta[2])
@@ -168,8 +171,15 @@ for k in tqdm(range(N)):
                     )
                     + eta[0:2, None]
                 )
-                sh_Z.set_offsets(zinmap.T)
-            lh_pose.set_data(*xupd[mk_first:mk, :2].T)
+                # sh_Z.set_offsets(zinmap.T)
+                ax.scatter(*zinmap, c="b", marker=".")
+            ax.plot(*xupd[mk_first:mk, :2].T, "k", lw=3)
+            # el = ellipse(eta[:2], P[:2, :2], 2, 40)
+            # ax.plot(*el.T, "g", lw=3)
+            for i in range(eta[3::2].size):
+                i *= 2
+                el = ellipse(eta[3:][i:i+2], P[3:, 3:][i:i+2, i:i+2], 2, 40)
+                ax.plot(*el.T, c="b")
 
             ax.set(
                 xlim=[-200, 200],
@@ -177,7 +187,8 @@ for k in tqdm(range(N)):
                 title=f"step {k}, laser scan {mk}, landmarks {len(eta[3:])//2},\nmeasurements {z.shape[0]}, num new = {np.sum(a[mk] == -1)}",
             )
             plt.draw()
-            plt.pause(0.00001)
+            plt.pause(0.1)
+            # input('press enter')
 
         mk += 1
 
